@@ -50,22 +50,29 @@ jobs:
           tag_name: latest-build
           name: "Win10 離線 AI — 最新版"
           body: |
-            ## Win10 離線 AI 安裝包
+            ## Win10 離線 AI 安裝包 v1.1
 
             ### 安裝方式
             1. 下載 `WinLLM_Setup.exe`
             2. 右鍵「以系統管理員身分執行」
-            3. 依照精靈完成安裝
-            4. 雙擊桌面「Win10 离线 AI」捷徑啟動
+            3. 勾選要安裝的模型，點擊「開始安裝」
+            4. 安裝精靈自動完成所有步驟（含模型下載）
 
-            ### 包含內容
-            - Ollama 本地 LLM 引擎
-            - Python 3.12 可攜版
-            - 網頁介面（支援 PDF / Excel / Word / PPT）
-            - 支援 Qwen3:8b 與 llama3.1:8b 模型
+            ### 包含 AI 模型（自動從 GitHub 下載，全程走 GitHub 網域）
+            | 模型 | 大小 | 說明 |
+            |------|------|------|
+            | **Qwen3-8B Q4_K_M** | 4.7 GB | 推薦首選，多語言，文件理解最強 |
+            | **Llama 3.1 8B Instruct Q4_K_M** | 4.6 GB | 通用對話，英文能力優秀 |
 
-            ### 模型安裝說明
-            安裝完成後，如果模型未自動下載，請參閱 [MODELS.md](models/README.md)。
+            > 模型分 3 段下載後自動合併匯入 Ollama，無需任何手動操作。
+
+            ### 支援文件格式
+            PDF · Excel (.xlsx) · Word (.docx) · PowerPoint (.pptx) · TXT
+
+            ### 系統需求
+            - Windows 10 x64
+            - 16 GB RAM（推薦）
+            - 15 GB 可用磁碟空間
 
             > 建置時間：${{ github.run_number }}
           files: |
