@@ -1,0 +1,77 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: |
+          pip install pyinstaller requests
+
+      - name: Inject repo info into installer
+        shell: pwsh
+        run: |
+          $owner = "${{ github.repository_owner }}"
+          $repo  = "${{ github.event.repository.name }}"
+          (Get-Content installer/installer.py) `
+            -replace 'OWNER_PLACEHOLDER', $owner `
+            -replace 'GITHUB_REPO\s*=\s*"Win10-Offline-AI"', "GITHUB_REPO = `"$repo`"" |
+          Set-Content installer/installer.py
+
+      - name: Build installer EXE
+        run: |
+          pyinstaller installer/installer.spec
+
+      - name: Copy dist artifact
+        shell: pwsh
+        run: |
+          Copy-Item "dist/WinLLM_Setup.exe" "WinLLM_Setup.exe"
+          $size = [math]::Round((Get-Item "WinLLM_Setup.exe").length / 1MB, 1)
+          echo "EXE size: ${size} MB"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: "Win10 離線 AI — 最新版"
+          body: |
+            ## Win10 離線 AI 安裝包
+
+            ### 安裝方式
+            1. 下載 `WinLLM_Setup.exe`
+            2. 右鍵「以系統管理員身分執行」
+            3. 依照精靈完成安裝
+            4. 雙擊桌面「Win10 离线 AI」捷徑啟動
+
+            ### 包含內容
+            - Ollama 本地 LLM 引擎
+            - Python 3.12 可攜版
+            - 網頁介面（支援 PDF / Excel / Word / PPT）
+            - 支援 Qwen3:8b 與 llama3.1:8b 模型
+
+            ### 模型安裝說明
+            安裝完成後，如果模型未自動下載，請參閱 [MODELS.md](models/README.md)。
+
+            > 建置時間：${{ github.run_number }}
+          files: |
+            WinLLM_Setup.exe
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
