@@ -19,7 +19,11 @@ import sys
 import os
 from pathlib import Path
 
-MODEL_URL  = "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf"
+BASE_URL   = "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main"
+MODEL_PARTS = [
+    "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf",
+    "qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf",
+]
 MODEL_FILE = "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
 CHUNK_SIZE = 90 * 1024 * 1024  # 90 MB
 
@@ -44,6 +48,20 @@ def download(url: str, dst: Path) -> None:
                         print(f"\r[download] {downloaded//1024//1024} / {total//1024//1024} MB ({pct}%)",
                               end="", flush=True)
         print()
+
+
+def merge_parts(parts: list, dst: Path) -> None:
+    print(f"[merge] 合併 {len(parts)} 個分片 → {dst.name}")
+    with open(dst, "wb") as out:
+        for part in parts:
+            print(f"[merge] 寫入 {part.name} ({part.stat().st_size//1024//1024} MB)")
+            with open(part, "rb") as f:
+                while True:
+                    data = f.read(8 * 1024 * 1024)
+                    if not data:
+                        break
+                    out.write(data)
+    print(f"[merge] 完成，總大小: {dst.stat().st_size//1024//1024} MB")
 
 
 def split_file(src: Path, out_dir: Path, chunk_size: int) -> int:
@@ -81,7 +99,17 @@ def main() -> None:
         except ImportError:
             print("錯誤: 請先安裝 requests: pip install requests", file=sys.stderr)
             sys.exit(1)
-        download(MODEL_URL, gguf_path)
+        part_paths = []
+        for part_name in MODEL_PARTS:
+            part_path = OUT_DIR / part_name
+            if part_path.exists():
+                print(f"[skip] {part_name} 已存在")
+            else:
+                download(f"{BASE_URL}/{part_name}", part_path)
+            part_paths.append(part_path)
+        merge_parts(part_paths, gguf_path)
+        for p in part_paths:
+            p.unlink()
 
     size_mb = gguf_path.stat().st_size // 1024 // 1024
     if size_mb < 4000:
