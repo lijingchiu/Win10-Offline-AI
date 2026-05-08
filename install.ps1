@@ -181,29 +181,47 @@ if (Test-Path $pythonExe) {
 }
 
 # ─── Step 5: Install pip wheels ───────────────────────────────────────────────
-Head "步驟 5 / 7：安裝 Python 套件（離線）"
+Head "步驟 5 / 8：安裝 Python 套件（離線）"
 
 $wheelCount = (Get-ChildItem "$WHEELS_DIR\*.whl" -ErrorAction SilentlyContinue).Count
 if ($wheelCount -eq 0) {
-    Warn "找不到 wheel 檔案，跳過（若後續文件解析失敗，請檢查 $WHEELS_DIR）"
+    Warn "找不到 wheel 檔案，跳過（若後續功能失效，請檢查 $WHEELS_DIR）"
 } else {
     Info "安裝 $wheelCount 個本機 wheel 套件..."
+    # Core document packages
     $result = & $pythonExe -m pip install --quiet --no-index --find-links $WHEELS_DIR `
         flask flask-cors pymupdf python-docx openpyxl python-pptx requests 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Warn "部分套件安裝警告（可能已安裝或有衝突）"
+        Warn "部分套件安裝警告: $result"
         Log "pip warning: $result"
     } else {
-        OK "所有套件安裝完成"
+        OK "文件處理套件安裝完成"
+    }
+    # Agent packages (pandas, numpy, xlwings, BM25, jieba, json-repair)
+    Info "安裝 Excel Agent 套件..."
+    $agentPkgs = "pandas numpy python-dateutil pytz tzdata six pywin32 xlwings rank-bm25 jieba json-repair"
+    $result2 = & $pythonExe -m pip install --quiet --no-index --find-links $WHEELS_DIR $agentPkgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Warn "Agent 套件安裝警告（若 Excel Agent 功能異常請檢查）: $result2"
+        Log "agent pip warning: $result2"
+    } else {
+        OK "Excel Agent 套件安裝完成"
+    }
+    # pywin32 post-install (required for xlwings COM on Windows)
+    $pywin32PostInstall = "$PYTHON_DIR\Scripts\pywin32_postinstall.py"
+    if (Test-Path $pywin32PostInstall) {
+        Info "執行 pywin32 後置安裝..."
+        & $pythonExe $pywin32PostInstall -install 2>&1 | Out-Null
+        OK "pywin32 後置安裝完成"
     }
 }
 
 # ─── Step 6: Import AI Models ─────────────────────────────────────────────────
-Head "步驟 6 / 7：匯入 AI 模型"
+Head "步驟 6 / 8：匯入 AI 模型"
 
 $models = @(
-    @{ Tag="qwen3:8b";    Dir="qwen3";   Label="Qwen3 8B Q4_K_M";       GGUF="Qwen3-8B-Q4_K_M.gguf" },
-    @{ Tag="llama3.1:8b"; Dir="llama31"; Label="Llama 3.1 8B Q4_K_M";   GGUF="Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf" }
+    @{ Tag="qwen2.5:7b";  Dir="qwen25_7b"; Label="Qwen2.5-7B-Instruct Q4_K_M (Agent 主力)"; GGUF="Qwen2.5-7B-Instruct-Q4_K_M.gguf" },
+    @{ Tag="qwen3:8b";    Dir="qwen3";     Label="Qwen3 8B Q4_K_M (備選)";                  GGUF="Qwen3-8B-Q4_K_M.gguf" }
 )
 
 foreach ($m in $models) {
@@ -242,8 +260,25 @@ foreach ($m in $models) {
     }
 }
 
+# ─── Step 6.5: Build Agent Tool Index ────────────────────────────────────────
+Head "步驟 6.5 / 8：建立 Excel Agent 工具索引"
+
+$agentDir = "$INSTALL\agent"
+if (Test-Path "$agentDir\build_index.py") {
+    Info "建立 BM25 工具檢索索引..."
+    $idxResult = & $pythonExe "$agentDir\build_index.py" 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        OK "工具索引建立完成"
+    } else {
+        Warn "工具索引建立失敗（Agent 功能可能異常）: $idxResult"
+        Log "build_index failed: $idxResult"
+    }
+} else {
+    Warn "找不到 build_index.py（agent/ 目錄尚未部署，請先執行步驟 7）"
+}
+
 # ─── Step 7: Deploy UI + shortcuts ───────────────────────────────────────────
-Head "步驟 7 / 7：部署介面與捷徑"
+Head "步驟 7 / 8：部署介面與捷徑"
 
 # Copy frontend
 $frontendSrc = "$REPO_DIR\frontend"
@@ -257,8 +292,41 @@ if (Test-Path $frontendSrc) {
 $serverSrc = "$REPO_DIR\server\server.py"
 if (Test-Path $serverSrc) {
     Copy-Item $serverSrc "$INSTALL\server.py" -Force
-    OK "文件服務已複製"
+    OK "後端服務已複製"
 }
+
+# Copy agent/ directory
+$agentSrc = "$REPO_DIR\agent"
+if (Test-Path $agentSrc) {
+    if (Test-Path $agentDir) { Remove-Item $agentDir -Recurse -Force }
+    Copy-Item $agentSrc $agentDir -Recurse -Force
+    OK "Excel Agent 模組已複製至 $agentDir"
+}
+
+# Copy config/
+$configSrc = "$REPO_DIR\config"
+if (Test-Path $configSrc) {
+    Copy-Item $configSrc "$INSTALL\config" -Recurse -Force
+    OK "設定檔已複製"
+}
+
+# Create backups and sessions directories
+New-Item -ItemType Directory -Force -Path "$INSTALL\backups"  | Out-Null
+New-Item -ItemType Directory -Force -Path "$INSTALL\sessions" | Out-Null
+OK "備份與暫存目錄已建立"
+
+# Run build_index now that agent/ is deployed
+Head "步驟 7.5 / 8：建立 Excel Agent 工具索引"
+$idxResult = & $pythonExe "$agentDir\build_index.py" 2>&1
+if ($LASTEXITCODE -eq 0) {
+    OK "工具索引建立完成"
+} else {
+    Warn "工具索引建立失敗（可在 start.bat 啟動後自動重建）: $idxResult"
+    Log "build_index failed: $idxResult"
+}
+
+# ─── Step 8: Write launchers + shortcuts ─────────────────────────────────────
+Head "步驟 8 / 8：建立啟動捷徑"
 
 # Write start.bat
 $startBat = @"
@@ -287,21 +355,40 @@ for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| find ":8765"') do taskkill /F 
 echo 所有服務已停止。
 '@ | Set-Content "$INSTALL\stop.bat" -Encoding UTF8
 
+# Write update.bat (update app files without reinstalling Ollama/models)
+$updateBat = @"
+@echo off
+chcp 65001 >nul
+echo 更新 Win10 离线 AI 應用程式檔案...
+set REPO=%~dp0
+xcopy /E /Y /I "%REPO%server\server.py" "$INSTALL\server.py*" >nul
+xcopy /E /Y /I "%REPO%agent" "$INSTALL\agent\" >nul
+xcopy /E /Y /I "%REPO%frontend" "$INSTALL\frontend\" >nul
+xcopy /E /Y /I "%REPO%config" "$INSTALL\config\" >nul
+"$($pythonExe.Replace('\','\\'))" "$INSTALL\agent\build_index.py"
+echo 更新完成！請重新啟動服務。
+pause
+"@
+$updateBat | Set-Content "$INSTALL\update.bat" -Encoding UTF8
+OK "update.bat 已建立"
+
 # Desktop shortcuts
 $desk = [Environment]::GetFolderPath('Desktop')
 ShortcutCreate "$INSTALL\start.bat" "$desk\Win10 离线 AI.lnk"
+ShortcutCreate "$INSTALL\stop.bat"  "$desk\停止 AI 服務.lnk"
 OK "桌面捷徑已建立"
 
 # ─── Done ─────────────────────────────────────────────────────────────────────
 Write-Host "`n"
-Write-Host '  ╔══════════════════════════════════════════════════╗' -ForegroundColor Green
-Write-Host '  ║   ✅  安裝完成！                                 ║' -ForegroundColor Green
-Write-Host '  ║                                                  ║' -ForegroundColor Green
-Write-Host '  ║   雙擊桌面「Win10 离线 AI」捷徑啟動             ║' -ForegroundColor Green
-Write-Host '  ║   或執行  C:\WinLLM\start.bat                   ║' -ForegroundColor Green
-Write-Host '  ╚══════════════════════════════════════════════════╝' -ForegroundColor Green
+Write-Host '  ╔════════════════════════════════════════════════════════╗' -ForegroundColor Green
+Write-Host '  ║   ✅  安裝完成！                                       ║' -ForegroundColor Green
+Write-Host '  ║                                                        ║' -ForegroundColor Green
+Write-Host '  ║   • 雙擊桌面「Win10 离线 AI」捷徑啟動                ║' -ForegroundColor Green
+Write-Host '  ║   • 包含 Excel Agent + 文件問答 + 備份管理            ║' -ForegroundColor Green
+Write-Host '  ║   • 更新應用程式：執行 C:\WinLLM\update.bat          ║' -ForegroundColor Green
+Write-Host '  ╚════════════════════════════════════════════════════════╝' -ForegroundColor Green
 
-Log "=== 安裝完成 ==="
+Log "=== 安裝完成 v2.0 ==="
 Write-Host ""
 Read-Host "按 Enter 立即啟動 AI 介面"
 Start-Process "$INSTALL\start.bat"

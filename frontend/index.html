@@ -550,6 +550,128 @@
   @media (max-width: 640px) {
     #sidebar { display: none; }
   }
+
+  /* ── Excel Agent Panel ────────────────────────────────── */
+  #agent-panel {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #agent-panel.active { display: flex; }
+  #main.agent-mode { display: none; }
+
+  .agent-header {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .agent-header h2 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0; }
+  .agent-mode-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border);
+  }
+  .agent-mode-badge.live { background: rgba(74,222,128,.15); color: var(--success); border-color: var(--success); }
+
+  .agent-upload-zone {
+    margin: 18px; border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 28px; text-align: center; cursor: pointer; transition: border-color .2s;
+    color: var(--text-dim);
+  }
+  .agent-upload-zone:hover, .agent-upload-zone.drag-over {
+    border-color: var(--accent); color: var(--text);
+  }
+  .agent-upload-zone .upload-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+  .agent-upload-zone.has-file { border-style: solid; border-color: var(--accent2); color: var(--text); }
+
+  .agent-messages {
+    flex: 1; overflow-y: auto; padding: 12px 18px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .agent-msg { padding: 10px 14px; border-radius: var(--radius); max-width: 85%; word-break: break-word; font-size: 14px; }
+  .agent-msg.user { background: var(--user-bubble); align-self: flex-end; }
+  .agent-msg.assistant { background: var(--ai-bubble); align-self: flex-start; border: 1px solid var(--border); }
+  .agent-msg.error { background: rgba(248,113,113,.1); border: 1px solid var(--error); color: var(--error); align-self: flex-start; }
+  .agent-msg .tool-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(108,99,255,.15); color: var(--accent); font-size: 11px;
+    padding: 2px 8px; border-radius: 20px; margin-bottom: 5px;
+  }
+  .agent-msg .download-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 8px; padding: 5px 12px; border-radius: 6px;
+    background: var(--accent); color: #fff; border: none; cursor: pointer; font-size: 12px;
+  }
+  .agent-msg .download-btn:hover { opacity: .85; }
+  .agent-msg .undo-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 6px; margin-left: 8px; padding: 4px 10px; border-radius: 6px;
+    background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border);
+    cursor: pointer; font-size: 11px;
+  }
+  .agent-msg .undo-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .thinking-indicator { align-self: flex-start; display: flex; align-items: center; gap: 8px; color: var(--text-dim); font-size: 13px; padding: 8px 0; }
+  .thinking-indicator .dots span {
+    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); animation: bounce 1.2s infinite;
+  }
+  .thinking-indicator .dots span:nth-child(2) { animation-delay: .2s; }
+  .thinking-indicator .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
+
+  .agent-input-area {
+    padding: 10px 18px; border-top: 1px solid var(--border);
+    background: var(--surface); display: flex; gap: 8px; align-items: flex-end;
+  }
+  .agent-input-area textarea {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-size: 14px; resize: none;
+    font-family: var(--font); min-height: 38px; max-height: 120px; overflow-y: auto;
+  }
+  .agent-input-area textarea:focus { outline: none; border-color: var(--accent); }
+  .agent-input-area button {
+    padding: 8px 16px; border-radius: 8px; border: none;
+    background: var(--accent); color: #fff; cursor: pointer; font-size: 14px; font-weight: 600;
+  }
+  .agent-input-area button:hover { opacity: .85; }
+  .agent-input-area button:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ── Confirm Modal ────────────────────────────────────── */
+  #confirm-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.65); z-index: 9999;
+    align-items: center; justify-content: center;
+  }
+  #confirm-modal.open { display: flex; }
+  .confirm-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; max-width: 420px; width: 90%;
+  }
+  .confirm-box h3 { color: var(--warning); margin: 0 0 12px; font-size: 15px; }
+  .confirm-box p { color: var(--text); font-size: 13px; line-height: 1.6; white-space: pre-line; }
+  .confirm-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+  .btn-cancel { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 18px; cursor: pointer; }
+  .btn-confirm { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 7px 18px; cursor: pointer; font-weight: 600; }
+  .btn-cancel:hover { border-color: var(--accent); }
+  .btn-confirm:hover { opacity: .85; }
+
+  /* ── Backup Panel ─────────────────────────────────────── */
+  .backup-section { padding: 10px 14px; border-top: 1px solid var(--border); }
+  .backup-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+  .backup-item {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 11px; display: flex; align-items: center; gap: 6px;
+  }
+  .backup-item .backup-info { flex: 1; overflow: hidden; }
+  .backup-item .backup-ts { color: var(--text-dim); font-size: 10px; }
+  .backup-item .backup-name { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .backup-item .backup-tool { color: var(--accent); font-size: 10px; }
+  .backup-item button { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim); font-size: 10px; padding: 2px 6px; cursor: pointer; }
+  .backup-item button:hover { border-color: var(--accent); color: var(--accent); }
+  .backup-item .del-btn:hover { border-color: var(--error); color: var(--error); }
 </style>
 </head>
 <body>
@@ -595,6 +717,9 @@
       <button class="agent-btn" data-agent="review" onclick="setAgent('review')">
         <span class="icon">🔍</span>審閱校對
       </button>
+      <button class="agent-btn" data-agent="excel-agent" onclick="setAgent('excel-agent')" style="grid-column:span 2; border-color: var(--accent2); color: var(--accent2);">
+        <span class="icon">📊</span>Excel Agent (新)
+      </button>
     </div>
   </div>
 
@@ -609,6 +734,15 @@
       <small style="font-size:10px">PDF · Excel · Word · PPT · TXT</small>
     </div>
     <div id="doc-list"></div>
+  </div>
+
+  <!-- Backup panel (Excel Agent) -->
+  <div class="backup-section" id="backup-section" style="display:none;">
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>📦 備份紀錄</span>
+      <button onclick="loadBackups()" style="background:none;border:none;color:var(--text-dim);font-size:11px;cursor:pointer;">重新整理</button>
+    </div>
+    <div class="backup-list" id="backup-list"><span style="color:var(--text-dim);font-size:11px;">尚無備份</span></div>
   </div>
 
   <div class="sidebar-footer">
@@ -732,6 +866,55 @@
        accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.csv,.md"
        multiple
        onchange="handleFileSelect(event)">
+
+<!-- ── Excel Agent Panel ──────────────────────────────────────── -->
+<div id="agent-panel">
+  <div class="agent-header">
+    <h2>📊 Excel Agent</h2>
+    <span class="agent-mode-badge" id="agent-mode-badge">未連線</span>
+    <span style="margin-left:auto; font-size:12px; color:var(--text-dim);" id="agent-file-name">尚未載入檔案</span>
+  </div>
+
+  <!-- Upload zone (shown when no file loaded) -->
+  <div class="agent-upload-zone" id="agent-upload-zone"
+       ondragover="agentDragOver(event)" ondragleave="agentDragLeave(event)"
+       ondrop="agentDrop(event)" onclick="triggerAgentFileInput()">
+    <span class="upload-icon">📂</span>
+    <strong>點擊或拖放 Excel 檔案到這裡</strong><br>
+    <small style="font-size:11px; color:var(--text-dim);">僅支援 .xlsx 格式</small>
+  </div>
+
+  <div class="agent-messages" id="agent-messages">
+    <!-- Welcome shown after file is loaded -->
+    <div id="agent-welcome" style="display:none; color:var(--text-dim); font-size:13px; padding:8px 0;">
+      <strong style="color:var(--text);">Excel 檔案已載入 ✓</strong><br>
+      你可以用自然語言操作 Excel，例如：<br>
+      「把工號重複的列刪掉」「依部門加總薪資」「畫一個銷售折線圖」
+    </div>
+  </div>
+
+  <div class="agent-input-area" id="agent-input-area" style="display:none;">
+    <textarea id="agent-input" placeholder="輸入操作指令（Enter 送出，Shift+Enter 換行）"
+              rows="1"
+              onkeydown="agentKeyDown(event)"
+              oninput="autoResizeTA(this)"></textarea>
+    <button id="agent-send-btn" onclick="sendAgentMessage()">送出</button>
+  </div>
+</div>
+
+<!-- ── Confirm Modal ────────────────────────────────────────────── -->
+<div id="confirm-modal">
+  <div class="confirm-box">
+    <h3>⚠️ 請確認操作</h3>
+    <p id="confirm-message">即將修改工作簿，確定繼續？</p>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="confirmCancel()">取消</button>
+      <button class="btn-confirm" onclick="confirmApprove()">確認執行</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="agent-file-input" accept=".xlsx" onchange="handleAgentFileSelect(event)" style="display:none;">
 
 <div id="toast"></div>
 
@@ -1230,6 +1413,390 @@ function showToast(msg, duration = 2500) {
   t.classList.add("show");
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => t.classList.remove("show"), duration);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EXCEL AGENT — all state, SSE, confirm, backup logic
+// ═══════════════════════════════════════════════════════════════
+
+const agentState = {
+  sessionId:    null,
+  filename:     null,
+  busy:         false,
+  pendingToken: null,  // confirm_token waiting for user approval
+  pendingSid:   null,
+  lastBackupId: null,  // for undo
+};
+
+// ── Mode switch ──────────────────────────────────────────────────
+
+const _origSetAgent = window.setAgent;
+window.setAgent = function(agent) {
+  if (agent === "excel-agent") {
+    document.getElementById("main").classList.add("agent-mode");
+    document.getElementById("agent-panel").classList.add("active");
+    document.getElementById("backup-section").style.display = "block";
+    document.querySelectorAll(".agent-btn").forEach(b => b.classList.toggle("active", b.dataset.agent === "excel-agent"));
+    if (!agentState.sessionId) {
+      agentState.sessionId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    }
+    loadBackups();
+  } else {
+    document.getElementById("main").classList.remove("agent-mode");
+    document.getElementById("agent-panel").classList.remove("active");
+    document.getElementById("backup-section").style.display = "none";
+    _origSetAgent(agent);
+  }
+};
+
+// ── File upload ──────────────────────────────────────────────────
+
+function triggerAgentFileInput() {
+  document.getElementById("agent-file-input").click();
+}
+
+function handleAgentFileSelect(e) {
+  const file = e.target.files?.[0];
+  if (file) agentLoadFile(file);
+  e.target.value = "";
+}
+
+function agentDragOver(e) {
+  e.preventDefault();
+  document.getElementById("agent-upload-zone").classList.add("drag-over");
+}
+function agentDragLeave() {
+  document.getElementById("agent-upload-zone").classList.remove("drag-over");
+}
+function agentDrop(e) {
+  e.preventDefault();
+  agentDragLeave();
+  const file = e.dataTransfer.files?.[0];
+  if (file) agentLoadFile(file);
+}
+
+async function agentLoadFile(file) {
+  if (!file.name.endsWith(".xlsx")) {
+    showToast("⚠️ 僅支援 .xlsx 格式", 3000);
+    return;
+  }
+  agentState.filename = file.name;
+  // Upload file immediately via chat endpoint (with empty message to just register)
+  const formData = new FormData();
+  formData.append("session_id", agentState.sessionId);
+  formData.append("message", "已上傳檔案，請問有什麼可以幫你？");
+  formData.append("file", file);
+
+  const zone = document.getElementById("agent-upload-zone");
+  zone.classList.add("has-file");
+  zone.innerHTML = `<span class="upload-icon">✅</span><strong>${file.name}</strong><br><small style="font-size:11px;">點擊換檔</small>`;
+
+  document.getElementById("agent-file-name").textContent = file.name;
+  document.getElementById("agent-upload-zone").style.display = "none";
+  document.getElementById("agent-welcome").style.display = "block";
+  document.getElementById("agent-input-area").style.display = "flex";
+  document.getElementById("agent-badge-badge");
+
+  // Stream the "file loaded" response
+  agentStream(formData);
+}
+
+// ── Send message ──────────────────────────────────────────────────
+
+function agentKeyDown(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAgentMessage(); }
+}
+function autoResizeTA(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 120) + "px";
+}
+
+function sendAgentMessage() {
+  const ta = document.getElementById("agent-input");
+  const msg = ta.value.trim();
+  if (!msg || agentState.busy) return;
+  if (!agentState.filename) { showToast("請先上傳 Excel 檔案"); return; }
+
+  ta.value = "";
+  autoResizeTA(ta);
+  agentAppendMsg("user", msg);
+
+  const formData = new FormData();
+  formData.append("session_id", agentState.sessionId);
+  formData.append("message", msg);
+  agentStream(formData);
+}
+
+// ── SSE streaming ─────────────────────────────────────────────────
+
+async function agentStream(formData) {
+  agentState.busy = true;
+  document.getElementById("agent-send-btn").disabled = true;
+
+  const thinkEl = agentShowThinking();
+  let assistantEl = null;
+
+  try {
+    const resp = await fetch("/api/agent/chat", { method: "POST", body: formData });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split("\n\n");
+      buf = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith("data:")) continue;
+        let evt;
+        try { evt = JSON.parse(part.slice(5).trim()); } catch { continue; }
+        handleAgentEvent(evt, thinkEl, (el) => { assistantEl = el; });
+      }
+    }
+  } catch (e) {
+    agentHideThinking(thinkEl);
+    agentAppendMsg("error", `連線錯誤: ${e.message}`);
+  } finally {
+    agentState.busy = false;
+    document.getElementById("agent-send-btn").disabled = false;
+  }
+}
+
+function handleAgentEvent(evt, thinkEl, setAssistantEl) {
+  switch (evt.type) {
+    case "thinking":
+      updateThinking(thinkEl, evt.text || "正在分析…");
+      break;
+    case "executing":
+      updateThinking(thinkEl, "執行中…");
+      break;
+    case "file_loaded":
+      agentHideThinking(thinkEl);
+      setModeIndicator("openpyxl");
+      break;
+    case "mode":
+      setModeIndicator(evt.mode);
+      break;
+    case "tool_selected": {
+      const el = agentAppendMsg("assistant",
+        `<span class="tool-badge">🔧 ${evt.name_zh}</span><br>${evt.explanation || ""}`
+      );
+      setAssistantEl(el);
+      break;
+    }
+    case "confirm_required":
+      agentHideThinking(thinkEl);
+      showConfirmModal(evt);
+      break;
+    case "result": {
+      agentHideThinking(thinkEl);
+      const success = evt.success !== false;
+      let html = evt.text ? evt.text.replace(/\n/g, "<br>") : (success ? "操作完成" : "操作失敗");
+      if (success && evt.download_token) {
+        html += `<br><button class="download-btn" onclick="agentDownload('${evt.download_token}')">⬇ 下載結果</button>`;
+        html += `<button class="undo-btn" onclick="agentUndo()">↩ 復原</button>`;
+      }
+      const el = agentAppendMsg(success ? "assistant" : "error", html);
+      setAssistantEl(el);
+      loadBackups();
+      break;
+    }
+    case "clarify":
+      agentHideThinking(thinkEl);
+      agentAppendMsg("assistant", evt.text);
+      break;
+    case "error":
+      agentHideThinking(thinkEl);
+      agentAppendMsg("error", evt.text);
+      break;
+    case "done":
+      agentHideThinking(thinkEl);
+      break;
+  }
+}
+
+// ── UI helpers ────────────────────────────────────────────────────
+
+function agentAppendMsg(type, html) {
+  const msgs = document.getElementById("agent-messages");
+  const div = document.createElement("div");
+  div.className = `agent-msg ${type}`;
+  div.innerHTML = html;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function agentShowThinking() {
+  const msgs = document.getElementById("agent-messages");
+  const div = document.createElement("div");
+  div.className = "thinking-indicator";
+  div.id = "thinking-" + Date.now();
+  div.innerHTML = `<div class="dots"><span></span><span></span><span></span></div><span id="${div.id}-txt">正在分析您的需求…</span>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+function updateThinking(el, text) {
+  if (!el) return;
+  const t = el.querySelector("span:last-child");
+  if (t) t.textContent = text;
+}
+function agentHideThinking(el) {
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+function setModeIndicator(mode) {
+  const badge = document.getElementById("agent-mode-badge");
+  if (!badge) return;
+  if (mode === "xlwings") {
+    badge.textContent = "⚡ 即時同步";
+    badge.className = "agent-mode-badge live";
+  } else {
+    badge.textContent = "📁 檔案模式";
+    badge.className = "agent-mode-badge";
+  }
+}
+
+// ── Download ──────────────────────────────────────────────────────
+
+function agentDownload(token) {
+  window.location.href = `/api/agent/download/${token}`;
+}
+
+// ── Undo ──────────────────────────────────────────────────────────
+
+async function agentUndo() {
+  const entries = await loadBackupsRaw();
+  if (!entries.length) { showToast("沒有可復原的備份"); return; }
+  const latest = entries[0];
+  if (!confirm(`確定要復原到「${latest.tool_zh}」操作前的版本？（${latest.timestamp}）`)) return;
+  try {
+    const r = await fetch("/api/agent/backups/restore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ backup_id: latest.id, session_id: agentState.sessionId }),
+    });
+    const data = await r.json();
+    if (data.status === "restored") {
+      showToast("✅ 已復原至備份版本");
+      agentAppendMsg("assistant", `↩ 已復原至「${latest.tool_zh}」操作前的版本（${latest.timestamp}）`);
+    } else {
+      showToast("❌ 復原失敗: " + (data.error || "未知"));
+    }
+  } catch (e) {
+    showToast("❌ 復原失敗: " + e.message);
+  }
+}
+
+// ── Confirm modal ─────────────────────────────────────────────────
+
+let _pendingConfirm = null;
+
+function showConfirmModal(evt) {
+  _pendingConfirm = evt;
+  document.getElementById("confirm-message").textContent = evt.message || "確定要執行此操作嗎？";
+  document.getElementById("confirm-modal").classList.add("open");
+}
+
+function confirmCancel() {
+  document.getElementById("confirm-modal").classList.remove("open");
+  _pendingConfirm = null;
+  agentState.busy = false;
+  document.getElementById("agent-send-btn").disabled = false;
+  agentAppendMsg("assistant", "❌ 操作已取消");
+}
+
+async function confirmApprove() {
+  document.getElementById("confirm-modal").classList.remove("open");
+  if (!_pendingConfirm) return;
+  const { confirm_token, session_id } = _pendingConfirm;
+  _pendingConfirm = null;
+
+  const thinkEl = agentShowThinking();
+  try {
+    const resp = await fetch("/api/agent/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm_token, session_id: session_id || agentState.sessionId, approved: true }),
+    });
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split("\n\n");
+      buf = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith("data:")) continue;
+        let evt;
+        try { evt = JSON.parse(part.slice(5).trim()); } catch { continue; }
+        handleAgentEvent(evt, thinkEl, () => {});
+      }
+    }
+  } catch (e) {
+    agentHideThinking(thinkEl);
+    agentAppendMsg("error", `確認執行失敗: ${e.message}`);
+  } finally {
+    agentState.busy = false;
+    document.getElementById("agent-send-btn").disabled = false;
+  }
+}
+
+// ── Backup panel ──────────────────────────────────────────────────
+
+async function loadBackupsRaw() {
+  try {
+    const r = await fetch("/api/agent/backups");
+    const data = await r.json();
+    return data.backups || [];
+  } catch { return []; }
+}
+
+async function loadBackups() {
+  const entries = await loadBackupsRaw();
+  const list = document.getElementById("backup-list");
+  if (!list) return;
+  if (!entries.length) {
+    list.innerHTML = `<span style="color:var(--text-dim);font-size:11px;">尚無備份</span>`;
+    return;
+  }
+  list.innerHTML = entries.slice(0, 20).map(e => `
+    <div class="backup-item">
+      <div class="backup-info">
+        <div class="backup-name">${e.original_filename}</div>
+        <div><span class="backup-tool">${e.tool_zh}</span> <span class="backup-ts">${e.timestamp.slice(0,16).replace("T"," ")}</span></div>
+      </div>
+      <button onclick="restoreBackup('${e.id}','${e.tool_zh}','${e.timestamp}')">還原</button>
+      <button class="del-btn" onclick="deleteBackup('${e.id}')">刪</button>
+    </div>
+  `).join("");
+}
+
+async function restoreBackup(bid, toolZh, ts) {
+  if (!confirm(`確定要還原到「${toolZh}」操作前的版本？\n時間: ${ts.slice(0,16).replace("T"," ")}`)) return;
+  const r = await fetch("/api/agent/backups/restore", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ backup_id: bid, session_id: agentState.sessionId }),
+  });
+  const data = await r.json();
+  if (data.status === "restored") {
+    showToast("✅ 已還原備份");
+    agentAppendMsg("assistant", `↩ 已還原「${toolZh}」操作前的版本`);
+  } else {
+    showToast("❌ 還原失敗: " + (data.error || "未知錯誤"));
+  }
+}
+
+async function deleteBackup(bid) {
+  await fetch(`/api/agent/backups/${bid}`, { method: "DELETE" });
+  loadBackups();
 }
 </script>
 </body>

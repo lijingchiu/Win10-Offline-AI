@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Win10 离线 AI",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "port": 8765
   },
   "ollama": {
@@ -10,14 +10,25 @@
     "origins": "*"
   },
   "models": {
-    "default": "qwen3:8b",
-    "fallback": "llama3.1:8b",
-    "preferred": ["qwen3:8b", "llama3.1:8b", "qwen3:4b", "llama3.2:3b"]
+    "default": "qwen2.5:7b",
+    "fallback": "qwen3:8b",
+    "preferred": ["qwen2.5:7b", "qwen3:8b", "qwen3:4b", "llama3.2:3b"]
+  },
+  "agent": {
+    "enabled": true,
+    "default_model": "qwen2.5:7b",
+    "num_ctx": 2048,
+    "max_tools_in_context": 5,
+    "auto_backup": true,
+    "xlwings_first": true
   },
   "install": {
     "dir": "C:/WinLLM",
     "python_dir": "C:/WinLLM/python",
     "models_dir": "C:/WinLLM/models",
-    "frontend_dir": "C:/WinLLM/frontend"
+    "frontend_dir": "C:/WinLLM/frontend",
+    "agent_dir": "C:/WinLLM/agent",
+    "backups_dir": "C:/WinLLM/backups",
+    "sessions_dir": "C:/WinLLM/sessions"
   }
 }
