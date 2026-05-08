@@ -1,117 +1,107 @@
 # Win10 離線 AI — 一鍵安裝包
 
-> 完全離線運行的本地 AI 助手，支援文件分析（PDF / Excel / Word / PPT），無需網路，資料不外傳。
+> 完全離線的本地 AI 助手，只需 `git clone` 即可取得所有檔案，不依賴任何 CDN 或外部下載。
 
 ---
 
-## 安裝步驟
+## 安裝方式（公司網路只開放 GitHub 時）
 
-### 1. 下載安裝包
+### 1. Clone 此 Repo
 
-前往 **[Releases](../../releases/latest)** 頁面，下載 `WinLLM_Setup.exe`。
+```bash
+git clone https://github.com/lijingchiu/Win10-Offline-AI.git
+```
 
-> 公司環境只開放 GitHub 網域同樣可以下載，因為 Release 檔案由 GitHub 伺服器提供。
+> **注意**：Repo 約 11.5 GB，首次 clone 需要較長時間，請耐心等候。
+> 建議使用有線網路連接，或在下班後讓 clone 在背景執行。
 
 ### 2. 執行安裝
 
-- 右鍵 `WinLLM_Setup.exe` → **「以系統管理員身分執行」**
-- 精靈會自動完成所有步驟
+進入下載好的資料夾，**右鍵** `install.bat` → **以系統管理員身分執行**
 
-### 3. 安裝模型
+安裝程式會自動完成：
 
-安裝精靈完成後，AI 模型會透過以下方式之一安裝：
-
-| 方式 | 說明 |
+| 步驟 | 說明 |
 |------|------|
-| GitHub Releases 自動下載 | 若管理員已將 GGUF 上傳至 Releases，自動下載 |
-| 網路直接拉取 | 若公司網路允許，自動執行 `ollama pull` |
-| 離線手動匯入 | 將 GGUF 放至 `C:\WinLLM\models\` 後執行 `import_model.bat` |
+| ① 環境檢查 | 確認管理員權限與磁碟空間 |
+| ② 安裝 Ollama | 組合 23 個分段 → 安裝 OllamaSetup.exe |
+| ③ 啟動服務 | 啟動 Ollama LLM 服務 |
+| ④ Python 3.12 | 解壓 Python 可攜版至 C:\WinLLM\python |
+| ⑤ 安裝套件 | 從本機 wheel 離線安裝所有 Python 依賴 |
+| ⑥ 匯入模型 | 組合 GGUF 分段 → ollama create |
+| ⑦ 部署介面 | 複製 Web UI + 建立桌面捷徑 |
 
-**→ 詳見 [模型安裝說明](models/README.md)**
+### 3. 啟動使用
 
-### 4. 啟動使用
-
-雙擊桌面的 **「Win10 离线 AI」** 捷徑，瀏覽器自動開啟介面。
+雙擊桌面 **「Win10 离线 AI」** 捷徑，瀏覽器自動開啟 `http://localhost:8765`
 
 ---
 
-## 功能介紹
+## Repo 內容說明
 
-| 功能 | 說明 |
+```
+Win10-Offline-AI/
+├── install.bat              ← 雙擊此檔案開始安裝
+├── install.ps1              ← PowerShell 安裝腳本
+├── frontend/
+│   └── index.html           ← Web UI（Chat + 文件上傳）
+├── server/
+│   └── server.py            ← 文件解析服務（PDF/Excel/Word/PPT）
+├── setup/
+│   ├── ollama/              ← OllamaSetup.exe（23 × 90MB 分段）
+│   ├── python/              ← Python 3.12 可攜版（39MB）
+│   ├── wheels/              ← pip wheel 套件（完全離線安裝）
+│   └── models/
+│       ├── qwen3/           ← Qwen3-8B Q4_K_M（54 × 90MB 分段）
+│       └── llama31/         ← Llama3.1-8B Q4_K_M（53 × 90MB 分段）
+└── README.md
+```
+
+---
+
+## 功能
+
+| 模式 | 功能 |
 |------|------|
-| 💬 一般對話 | 與 AI 自由對話 |
+| 💬 一般對話 | 與 AI 自由交流 |
 | 📄 文件問答 | 上傳文件後針對內容提問 |
 | 📝 文件摘要 | 自動生成結構化摘要 |
-| 📊 資料提取 | 從文件提取表格、數據 |
+| 📊 資料提取 | 提取表格、數字、關鍵資訊 |
 | 🌐 翻譯助手 | 中英文互譯 |
 | 🔍 審閱校對 | 文件審閱與改善建議 |
 
-### 支援的文件格式
-
-- PDF（含掃描件文字層）
-- Excel（.xlsx / .xls）
-- Word（.docx）
-- PowerPoint（.pptx）
-- 純文字（.txt / .csv / .md）
+**支援格式**：PDF · Excel (.xlsx) · Word (.docx) · PowerPoint (.pptx) · TXT · CSV
 
 ---
 
-## 架構說明
+## AI 模型
 
-```
-C:\WinLLM\                   ← 安裝目錄
-├── frontend/                ← 網頁介面（HTML + JS）
-│   └── index.html
-├── python/                  ← Python 3.12 可攜版
-├── models/                  ← GGUF 模型暫存區
-├── server.py                ← 本地文件處理服務 (port 8765)
-├── start.bat                ← 啟動腳本
-├── stop.bat                 ← 停止腳本
-└── scripts/
-    └── import_model.bat     ← 手動匯入模型
-
-Ollama 服務 → port 11434     ← LLM 推理引擎
-文件服務   → port 8765      ← 提供前端 + 文件解析 API
-```
+| 模型 | 參數 | 大小 | 說明 |
+|------|------|------|------|
+| **Qwen3-8B Q4_K_M** | 8B | 4.7 GB | 推薦首選，繁體中文最佳 |
+| **Llama 3.1 8B Instruct Q4_K_M** | 8B | 4.6 GB | 通用對話，英文能力優秀 |
 
 ---
 
-## 離線安裝完整流程（公司網路限制時）
+## 系統需求
 
-```
-家用電腦（可上網）                   公司電腦（只能 GitHub）
-─────────────────────                ─────────────────────────
-1. 下載 WinLLM_Setup.exe            2. 執行 WinLLM_Setup.exe
-   (from GitHub Releases)              (以管理員身分)
-3. 執行 download_models_home.ps1    4. 複製 .gguf 檔案至
-   下載 GGUF 模型至 USB                C:\WinLLM\models\
-                          ──USB──→  5. 執行 import_model.bat
-                                    6. 雙擊桌面捷徑啟動！
-```
+- Windows 10 x64（64 位元）
+- RAM：16 GB 以上推薦（最低 8 GB）
+- 磁碟：C 槽至少 15 GB 可用空間
+- 不需要獨立顯示卡（CPU 推理，每秒約 2-8 tokens）
 
 ---
 
 ## 常見問題
 
-**Q: 介面顯示「無法連線至 Ollama」**
-→ 確認已執行 `start.bat`，等待約 5 秒後重新整理瀏覽器。
+**Q：clone 很慢怎麼辦？**
+→ 正常，Repo 共 11.5 GB。若進度停滯超過 10 分鐘，可中斷後重新執行 `git clone`（Git 支援斷點續傳）。
 
-**Q: 沒有可用模型**
-→ 參考 [模型安裝說明](models/README.md)，手動匯入 GGUF 檔案。
+**Q：安裝後介面顯示「無法連線 Ollama」**
+→ 確認已執行 `C:\WinLLM\start.bat`，並等候 5 秒後重新整理瀏覽器。
 
-**Q: 文件上傳後無反應**
-→ 確認 `start.bat` 已啟動文件服務（Python 服務 port 8765）。
+**Q：回應速度慢**
+→ 無 GPU 下 8B 模型每秒 2-8 tokens 為正常速度。
 
-**Q: 回應速度慢**
-→ 8B 模型在無 GPU 電腦上每秒約 2-8 個 token，屬正常現象。可改用 4B 模型加速。
-
----
-
-## 技術棧
-
-- **LLM 引擎**: [Ollama](https://github.com/ollama/ollama)
-- **推薦模型**: Qwen3-8B / Llama-3.1-8B（量化版 Q4_K_M）
-- **Python 可攜版**: [python-build-standalone](https://github.com/indygreg/python-build-standalone)
-- **文件解析**: PyMuPDF / python-docx / openpyxl / python-pptx
-- **前端**: 純 HTML + JavaScript（無框架依賴）
-- **安裝程式**: Python + PyInstaller（GitHub Actions 自動建置）
+**Q：需要更新或重新安裝**
+→ 執行 `git pull` 取得最新版本，再重新執行 `install.bat`。
