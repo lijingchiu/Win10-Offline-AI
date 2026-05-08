@@ -30,8 +30,8 @@ git clone https://github.com/lijingchiu/Win10-Offline-AI.git
 | ④ Python 3.12 | 解壓 Python 可攜版至 `C:\WinLLM\python` |
 | ⑤ 安裝套件 | 從本機 wheel 離線安裝所有依賴（含 pandas / xlwings / jieba） |
 | ⑥ 匯入模型 | 組合 GGUF 分段 → ollama create |
-| ⑦ 部署介面 | 複製 Web UI + Agent 模組 + 建立桌面捷徑 |
-| ⑧ 建立索引 | 建立 38 個 Excel 工具的 BM25 檢索索引 |
+| ⑦ 部署介面 | 複製 Web UI + Agent 模組 + 設定檔到 `C:\WinLLM\` |
+| ⑧ 建立索引與捷徑 | 建立 38 個 Excel 工具的 BM25 索引 + 桌面啟動捷徑 |
 
 ### 3. 啟動使用
 

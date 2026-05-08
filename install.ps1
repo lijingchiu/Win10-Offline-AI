@@ -21,7 +21,6 @@ $SETUP_DIR  = "$REPO_DIR\setup"
 $LOG_FILE   = "$INSTALL\install.log"
 
 $OLLAMA_TAG  = 'qwen3:8b'
-$LLAMA_TAG   = 'llama3.1:8b'
 
 # ─── Colours ─────────────────────────────────────────────────────────────────
 function Info  ($m) { Write-Host "  $m" -ForegroundColor Cyan }
@@ -87,14 +86,14 @@ function ShortcutCreate ($targetPath, $linkPath) {
 Clear-Host
 Write-Host @'
   ╔══════════════════════════════════════════════════════════╗
-  ║        Win10 離線 AI — 一鍵安裝                         ║
-  ║   Ollama + Qwen3-8B + Llama3.1-8B + Web UI             ║
+  ║        Win10 離線 AI — 一鍵安裝 v2.0                    ║
+  ║   Ollama + Qwen2.5-7B + Qwen3-8B + Excel Agent + Web UI ║
   ║   完全離線，資料不外傳                                   ║
   ╚══════════════════════════════════════════════════════════╝
 '@ -ForegroundColor Cyan
 
 # ─── Pre-flight checks ────────────────────────────────────────────────────────
-Head "步驟 1 / 7：環境檢查"
+Head "步驟 1 / 8：環境檢查"
 
 if (-not (IsAdmin)) {
     Err "需要管理員權限！"
@@ -119,7 +118,7 @@ Log "=== 安裝開始 ==="
 OK "安裝目錄：$INSTALL"
 
 # ─── Step 2: Install Ollama ───────────────────────────────────────────────────
-Head "步驟 2 / 7：安裝 Ollama"
+Head "步驟 2 / 8：安裝 Ollama"
 
 $ollamaExe = FindOllama
 if ($ollamaExe) {
@@ -146,7 +145,7 @@ if ($ollamaExe) {
 }
 
 # ─── Step 3: Start Ollama service ─────────────────────────────────────────────
-Head "步驟 3 / 7：啟動 Ollama 服務"
+Head "步驟 3 / 8：啟動 Ollama 服務"
 
 $env:OLLAMA_ORIGINS = '*'
 $running = WaitOllama -MaxSec 3
@@ -158,7 +157,7 @@ if (-not $running) {
 OK "Ollama 服務就緒 (localhost:11434)"
 
 # ─── Step 4: Python portable ─────────────────────────────────────────────────
-Head "步驟 4 / 7：Python 3.12 可攜版"
+Head "步驟 4 / 8：Python 3.12 可攜版"
 
 $pythonExe = "$PYTHON_DIR\python.exe"
 if (Test-Path $pythonExe) {
@@ -260,25 +259,10 @@ foreach ($m in $models) {
     }
 }
 
-# ─── Step 6.5: Build Agent Tool Index ────────────────────────────────────────
-Head "步驟 6.5 / 8：建立 Excel Agent 工具索引"
+# ─── Step 7: Deploy UI + agent module ────────────────────────────────────────
+Head "步驟 7 / 8：部署介面與 Agent 模組"
 
 $agentDir = "$INSTALL\agent"
-if (Test-Path "$agentDir\build_index.py") {
-    Info "建立 BM25 工具檢索索引..."
-    $idxResult = & $pythonExe "$agentDir\build_index.py" 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        OK "工具索引建立完成"
-    } else {
-        Warn "工具索引建立失敗（Agent 功能可能異常）: $idxResult"
-        Log "build_index failed: $idxResult"
-    }
-} else {
-    Warn "找不到 build_index.py（agent/ 目錄尚未部署，請先執行步驟 7）"
-}
-
-# ─── Step 7: Deploy UI + shortcuts ───────────────────────────────────────────
-Head "步驟 7 / 8：部署介面與捷徑"
 
 # Copy frontend
 $frontendSrc = "$REPO_DIR\frontend"
@@ -315,18 +299,23 @@ New-Item -ItemType Directory -Force -Path "$INSTALL\backups"  | Out-Null
 New-Item -ItemType Directory -Force -Path "$INSTALL\sessions" | Out-Null
 OK "備份與暫存目錄已建立"
 
-# Run build_index now that agent/ is deployed
-Head "步驟 7.5 / 8：建立 Excel Agent 工具索引"
-$idxResult = & $pythonExe "$agentDir\build_index.py" 2>&1
-if ($LASTEXITCODE -eq 0) {
-    OK "工具索引建立完成"
-} else {
-    Warn "工具索引建立失敗（可在 start.bat 啟動後自動重建）: $idxResult"
-    Log "build_index failed: $idxResult"
-}
+# ─── Step 8: Build index + launchers + shortcuts ─────────────────────────────
+Head "步驟 8 / 8：建立索引與啟動捷徑"
 
-# ─── Step 8: Write launchers + shortcuts ─────────────────────────────────────
-Head "步驟 8 / 8：建立啟動捷徑"
+# Build BM25 tool index now that agent/ is deployed
+if (Test-Path "$agentDir\build_index.py") {
+    Info "建立 BM25 工具檢索索引..."
+    $idxResult = & $pythonExe "$agentDir\build_index.py" 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        OK "工具索引建立完成"
+    } else {
+        Warn "工具索引建立失敗（可在 start.bat 啟動後自動重建）: $idxResult"
+        Log "build_index failed: $idxResult"
+    }
+} else {
+    Warn "找不到 build_index.py（Excel Agent 將無法使用）"
+    Log "build_index.py missing"
+}
 
 # Write start.bat
 $startBat = @"
