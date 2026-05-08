@@ -372,8 +372,14 @@ class InstallerApp(tk.Tk):
 
         # Install pip packages — prefer bundled wheels (offline), fallback to PyPI
         self.after(0, lambda: self.progress(44, "安裝 Python 套件..."))
-        pkgs = ["flask", "flask-cors", "pymupdf", "python-docx",
-                "openpyxl", "python-pptx", "requests"]
+        pkgs = [
+            # Core (document Q&A)
+            "flask", "flask-cors", "pymupdf", "python-docx",
+            "openpyxl", "python-pptx", "requests",
+            # Excel Agent (v2.0)
+            "pandas", "numpy", "python-dateutil", "pytz", "tzdata", "six",
+            "pywin32", "xlwings", "rank-bm25", "jieba", "json-repair",
+        ]
         # Look for setup/wheels/ — prefer PyInstaller bundle (sys._MEIPASS),
         # then EXE-adjacent / repo-relative paths (running from cloned repo).
         wheels_dir = None
@@ -397,11 +403,16 @@ class InstallerApp(tk.Tk):
         else:
             self.after(0, lambda: self.log("⚠️  找不到本機 wheel，改用線上 PyPI（需要網路）", "#fbbf24"))
             cmd = [str(python_exe), "-m", "pip", "install", "--quiet"] + pkgs
-        r = run(cmd, timeout=300)
+        r = run(cmd, timeout=600)
         if r.returncode != 0:
             self.after(0, lambda: self.log(f"⚠️  套件安裝警告", "#fbbf24"))
         else:
             self.after(0, lambda: self.log("✅ Python 套件安裝完成"))
+
+        # pywin32 post-install (xlwings COM bridge needs this on Windows)
+        post = python_exe.parent / "Scripts" / "pywin32_postinstall.py"
+        if post.exists():
+            run([str(python_exe), str(post), "-install"], timeout=60)
 
         # Step 4 — Deploy web interface
         self.after(0, lambda: self.set_step(4))
@@ -503,17 +514,41 @@ class InstallerApp(tk.Tk):
             self.after(0, lambda: self.log(f"⚠️  Ollama create 失敗:\n{r.stderr[:300]}", "#fbbf24"))
 
     # ── Deploy helper ─────────────────────────────────────────────────────────
+    def _resource_root(self) -> Path:
+        """Locate bundled resources — sys._MEIPASS in PyInstaller onefile, repo root in dev."""
+        meipass = getattr(sys, "_MEIPASS", None)
+        return Path(meipass) if meipass else Path(__file__).resolve().parent.parent
+
     def _deploy(self, python_exe: Path):
-        # Copy frontend and server from installer bundle
-        for src_name, dst_name in [("frontend", "frontend"), ("server", None)]:
-            src = Path(__file__).parent.parent / src_name
-            if src.exists():
-                dst = INSTALL_DIR / (dst_name or "")
-                if dst_name:
-                    shutil.copytree(str(src), str(dst), dirs_exist_ok=True)
-                else:
-                    for f in src.iterdir():
-                        shutil.copy2(str(f), str(INSTALL_DIR / f.name))
+        root = self._resource_root()
+
+        # Copy directory-style modules
+        for dir_name in ("frontend", "agent", "config"):
+            src = root / dir_name
+            if src.is_dir():
+                dst = INSTALL_DIR / dir_name
+                shutil.copytree(str(src), str(dst), dirs_exist_ok=True)
+
+        # Copy server.py (and any siblings) to INSTALL_DIR root
+        server_dir = root / "server"
+        if server_dir.is_dir():
+            for f in server_dir.iterdir():
+                if f.is_file():
+                    shutil.copy2(str(f), str(INSTALL_DIR / f.name))
+
+        # Create backups + sessions directories
+        (INSTALL_DIR / "backups").mkdir(parents=True, exist_ok=True)
+        (INSTALL_DIR / "sessions").mkdir(parents=True, exist_ok=True)
+
+        # Build BM25 tool index for Excel Agent
+        build_idx = INSTALL_DIR / "agent" / "build_index.py"
+        if build_idx.exists():
+            self.after(0, lambda: self.log("🔧 建立 Excel Agent 工具索引..."))
+            r = run([str(python_exe), str(build_idx)], timeout=120)
+            if r.returncode == 0:
+                self.after(0, lambda: self.log("✅ 工具索引建立完成"))
+            else:
+                self.after(0, lambda: self.log(f"⚠️  工具索引建立失敗", "#fbbf24"))
 
         ollama_exe = self._find_ollama() or Path("ollama")
 

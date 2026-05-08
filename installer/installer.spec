@@ -16,7 +16,9 @@ a = Analysis(
         (str(ROOT / 'frontend'),     'frontend'),
         (str(ROOT / 'server'),       'server'),
         (str(ROOT / 'config'),       'config'),
-        # Bundle Python wheels for fully-offline pip install (~31 MB)
+        # Excel Agent module (38 tools, BM25 registry, runner) — REQUIRED for v2.0
+        (str(ROOT / 'agent'),        'agent'),
+        # Python wheels for fully-offline pip install (~80 MB, includes Agent deps)
         (str(ROOT / 'setup' / 'wheels'), 'setup/wheels'),
     ],
     hiddenimports=[
