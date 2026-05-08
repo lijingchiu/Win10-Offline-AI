@@ -13,9 +13,11 @@ a = Analysis(
     pathex=[str(ROOT)],
     binaries=[],
     datas=[
-        (str(ROOT / 'frontend'),  'frontend'),
-        (str(ROOT / 'server'),    'server'),
-        (str(ROOT / 'config'),    'config'),
+        (str(ROOT / 'frontend'),     'frontend'),
+        (str(ROOT / 'server'),       'server'),
+        (str(ROOT / 'config'),       'config'),
+        # Bundle Python wheels for fully-offline pip install (~31 MB)
+        (str(ROOT / 'setup' / 'wheels'), 'setup/wheels'),
     ],
     hiddenimports=[
         'tkinter', 'tkinter.ttk', 'tkinter.messagebox', 'tkinter.filedialog',

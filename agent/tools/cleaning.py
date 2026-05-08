@@ -84,7 +84,7 @@ def remove_duplicates(wb, *, sheet: str = "", columns: list = None, keep: str = 
 )
 def strip_whitespace(wb, *, sheet: str = "", columns: list = None) -> dict:
     ws, df, _ = _ws_to_df(wb, sheet)
-    target = columns if columns else list(df.select_dtypes(include="str").columns)
+    target = columns if columns else list(df.select_dtypes(include="object").columns)
     bad = [c for c in target if c not in df.columns]
     if bad:
         return {"error": f"欄位不存在: {bad}"}

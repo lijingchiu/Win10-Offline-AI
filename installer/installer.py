@@ -374,11 +374,19 @@ class InstallerApp(tk.Tk):
         self.after(0, lambda: self.progress(44, "安裝 Python 套件..."))
         pkgs = ["flask", "flask-cors", "pymupdf", "python-docx",
                 "openpyxl", "python-pptx", "requests"]
-        # Look for setup/wheels/ next to the EXE / spec root (offline path)
+        # Look for setup/wheels/ — prefer PyInstaller bundle (sys._MEIPASS),
+        # then EXE-adjacent / repo-relative paths (running from cloned repo).
         wheels_dir = None
-        for cand in [Path(sys.executable).parent / "setup" / "wheels",
-                     Path(__file__).resolve().parent.parent / "setup" / "wheels",
-                     INSTALL_DIR.parent / "setup" / "wheels"]:
+        candidates = []
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            candidates.append(Path(meipass) / "setup" / "wheels")
+        candidates += [
+            Path(sys.executable).parent / "setup" / "wheels",
+            Path(__file__).resolve().parent.parent / "setup" / "wheels",
+            INSTALL_DIR.parent / "setup" / "wheels",
+        ]
+        for cand in candidates:
             if cand.is_dir() and any(cand.glob("*.whl")):
                 wheels_dir = cand
                 break
