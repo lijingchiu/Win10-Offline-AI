@@ -1027,9 +1027,20 @@ function setOllamaStatus(ok, msg) {
 function updateModelList(models) {
   const sel = document.getElementById("model-select");
   const prev = sel.value;
-  sel.innerHTML = models.length
-    ? models.map(m => `<option value="${m}">${m}</option>`).join("")
-    : '<option value="">（無可用模型）</option>';
+  sel.textContent = "";
+  if (models.length) {
+    models.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      sel.appendChild(opt);
+    });
+  } else {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "（無可用模型）";
+    sel.appendChild(opt);
+  }
   if (prev && models.includes(prev)) sel.value = prev;
   state.model = sel.value;
 }
@@ -1527,7 +1538,12 @@ async function agentLoadFile(file) {
 
   const zone = document.getElementById("agent-upload-zone");
   zone.classList.add("has-file");
-  zone.innerHTML = `<span class="upload-icon">✅</span><strong>${file.name}</strong><br><small style="font-size:11px;">點擊換檔</small>`;
+  zone.textContent = "";
+  const icon = document.createElement("span"); icon.className = "upload-icon"; icon.textContent = "✅";
+  const strong = document.createElement("strong"); strong.textContent = file.name;
+  const br = document.createElement("br");
+  const small = document.createElement("small"); small.style.fontSize = "11px"; small.textContent = "點擊換檔";
+  zone.append(icon, " ", strong, br, small);
 
   document.getElementById("agent-file-name").textContent = file.name;
   document.getElementById("agent-upload-zone").style.display = "none";
@@ -1619,9 +1635,14 @@ function handleAgentEvent(evt, thinkEl, setAssistantEl) {
       setModeIndicator(evt.mode);
       break;
     case "tool_selected": {
-      const el = agentAppendMsg("assistant",
-        `<span class="tool-badge">🔧 ${evt.name_zh}</span><br>${evt.explanation || ""}`
-      );
+      const frag = document.createDocumentFragment();
+      const badge = document.createElement("span");
+      badge.className = "tool-badge";
+      badge.textContent = `🔧 ${evt.name_zh || ""}`;
+      frag.appendChild(badge);
+      frag.appendChild(document.createElement("br"));
+      if (evt.explanation) frag.appendChild(document.createTextNode(evt.explanation));
+      const el = agentAppendMsg("assistant", frag);
       setAssistantEl(el);
       break;
     }
@@ -1632,12 +1653,25 @@ function handleAgentEvent(evt, thinkEl, setAssistantEl) {
     case "result": {
       agentHideThinking(thinkEl);
       const success = evt.success !== false;
-      let html = evt.text ? evt.text.replace(/\n/g, "<br>") : (success ? "操作完成" : "操作失敗");
+      const frag = document.createDocumentFragment();
+      const text = evt.text || (success ? "操作完成" : "操作失敗");
+      // Render text safely with line breaks
+      String(text).split(/\n/).forEach((line, i) => {
+        if (i > 0) frag.appendChild(document.createElement("br"));
+        frag.appendChild(document.createTextNode(line));
+      });
       if (success && evt.download_token) {
-        html += `<br><button class="download-btn" onclick="agentDownload('${evt.download_token}')">⬇ 下載結果</button>`;
-        html += `<button class="undo-btn" onclick="agentUndo()">↩ 復原</button>`;
+        frag.appendChild(document.createElement("br"));
+        const dlBtn = document.createElement("button");
+        dlBtn.className = "download-btn"; dlBtn.textContent = "⬇ 下載結果";
+        dlBtn.addEventListener("click", () => agentDownload(evt.download_token));
+        frag.appendChild(dlBtn);
+        const undoBtn = document.createElement("button");
+        undoBtn.className = "undo-btn"; undoBtn.textContent = "↩ 復原";
+        undoBtn.addEventListener("click", () => agentUndo());
+        frag.appendChild(undoBtn);
       }
-      const el = agentAppendMsg(success ? "assistant" : "error", html);
+      const el = agentAppendMsg(success ? "assistant" : "error", frag);
       setAssistantEl(el);
       loadBackups();
       break;
@@ -1658,11 +1692,16 @@ function handleAgentEvent(evt, thinkEl, setAssistantEl) {
 
 // ── UI helpers ────────────────────────────────────────────────────
 
-function agentAppendMsg(type, html) {
+function agentAppendMsg(type, content) {
   const msgs = document.getElementById("agent-messages");
   const div = document.createElement("div");
   div.className = `agent-msg ${type}`;
-  div.innerHTML = html;
+  // Accept either a Node/DocumentFragment (preferred) or a plain string (rendered as text)
+  if (content instanceof Node) {
+    div.appendChild(content);
+  } else {
+    div.textContent = String(content == null ? "" : content);
+  }
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   return div;

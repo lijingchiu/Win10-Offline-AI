@@ -6,6 +6,7 @@ import io
 import json
 import mimetypes
 import os
+import re
 import sys
 import uuid
 import threading
@@ -238,11 +239,11 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
-    # Allowed origins (localhost only — local-first app, browser must be on the same machine)
+    # Allowed origins (localhost only). 'null' (file://) is intentionally NOT allowed —
+    # any local HTML file would otherwise be able to read the API.
     _ALLOWED_ORIGINS = {
         "http://localhost:8765", "http://127.0.0.1:8765",
         "http://localhost",      "http://127.0.0.1",
-        "null",  # file:// origin when opening index.html directly
     }
 
     def _cors(self):
@@ -280,9 +281,16 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_backups_list()
             return
 
-        # Static files
-        fpath = FRONTEND_DIR / (path.lstrip("/") or "index.html")
-        if fpath.exists() and fpath.is_file():
+        # Static files — resolve and verify the path stays inside FRONTEND_DIR
+        rel = path.lstrip("/") or "index.html"
+        try:
+            fpath = (FRONTEND_DIR / rel).resolve()
+            frontend_root = FRONTEND_DIR.resolve()
+            # Python 3.9+: Path.is_relative_to. Use the manual check for portability.
+            inside = str(fpath).startswith(str(frontend_root) + os.sep) or fpath == frontend_root
+        except Exception:
+            inside = False
+        if inside and fpath.exists() and fpath.is_file():
             mime, _ = mimetypes.guess_type(str(fpath))
             data = fpath.read_bytes()
             self.send_response(200)
@@ -361,7 +369,14 @@ class Handler(BaseHTTPRequestHandler):
 
     # ── Agent: session info ───────────────────────────────────────────────────
 
+    @staticmethod
+    def _is_safe_sid(sid: str) -> bool:
+        return isinstance(sid, str) and bool(re.fullmatch(r"[A-Za-z0-9_\-]{1,64}", sid))
+
     def _handle_agent_session(self, sid: str):
+        if not self._is_safe_sid(sid):
+            self._json({"error": "invalid session_id"}, 400)
+            return
         s = SESSIONS.get(sid)
         if not s:
             self._json({"session_id": sid, "active": False})
@@ -375,6 +390,9 @@ class Handler(BaseHTTPRequestHandler):
         })
 
     def _handle_session_delete(self, sid: str):
+        if not self._is_safe_sid(sid):
+            self._json({"error": "invalid session_id"}, 400)
+            return
         import shutil
         with _lock:
             SESSIONS.pop(sid, None)
@@ -435,7 +453,10 @@ class Handler(BaseHTTPRequestHandler):
             def field(k): return str(data.get(k, ""))
             file_part = None
 
-        sid     = field("session_id") or str(uuid.uuid4())
+        raw_sid = field("session_id") or str(uuid.uuid4())
+        # Reject anything that isn't a safe identifier (prevent path traversal / injection
+        # via session_id used as a directory name).
+        sid = raw_sid if re.fullmatch(r"[A-Za-z0-9_\-]{1,64}", raw_sid) else str(uuid.uuid4())
         message = field("message").strip()
 
         if not message:
@@ -629,6 +650,9 @@ class Handler(BaseHTTPRequestHandler):
         confirm_token = data.get("confirm_token", "")
         approved      = data.get("approved", False)
 
+        if not self._is_safe_sid(sid):
+            self._json({"error": "invalid session_id"}, 400)
+            return
         session = SESSIONS.get(sid)
         if not session:
             self._json({"error": "Session 不存在"}, 404)

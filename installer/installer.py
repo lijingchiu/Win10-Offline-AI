@@ -328,7 +328,7 @@ class InstallerApp(tk.Tk):
         # Start Ollama service
         ollama_exe = self._find_ollama()
         env = os.environ.copy()
-        env["OLLAMA_ORIGINS"] = "*"
+        env["OLLAMA_ORIGINS"] = "http://localhost:8765,http://127.0.0.1:8765"
         subprocess.Popen([str(ollama_exe), "serve"], env=env,
                          creationflags=subprocess.CREATE_NO_WINDOW)
         time.sleep(4)
@@ -513,7 +513,7 @@ class InstallerApp(tk.Tk):
             "@echo off\r\n"
             "chcp 65001 >nul\r\n"
             "title Win10 离线 AI\r\n"
-            "set OLLAMA_ORIGINS=*\r\n"
+            "set OLLAMA_ORIGINS=http://localhost:8765,http://127.0.0.1:8765\r\n"
             f'tasklist /FI "IMAGENAME eq ollama.exe" 2>nul | find "ollama.exe" >nul || '
             f'start "" /B "{ollama_exe}" serve\r\n'
             "timeout /t 4 /nobreak >nul\r\n"
