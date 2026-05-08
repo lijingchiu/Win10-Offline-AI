@@ -1129,18 +1129,21 @@ function renderDocList() {
   const icons = { pdf: "📕", xlsx: "📗", xls: "📗", docx: "📘", doc: "📘",
     pptx: "📙", ppt: "📙", txt: "📄", csv: "📊", md: "📄" };
   const list = document.getElementById("doc-list");
-  list.innerHTML = state.docs.map(d => {
+  list.innerHTML = "";
+  state.docs.forEach(d => {
     const ext = d.name.split(".").pop().toLowerCase();
     const icon = icons[ext] || "📄";
     const kc = d.chars > 1000 ? Math.round(d.chars / 1000) + "K" : d.chars;
-    return `
-      <div class="doc-item active">
-        <span class="doc-icon">${icon}</span>
-        <span class="doc-name" title="${d.name}">${d.name}</span>
-        <span class="doc-chars">${kc} 字</span>
-        <span class="doc-remove" onclick="removeDoc('${d.name.replace(/'/g, "\\'")}')">✕</span>
-      </div>`;
-  }).join("");
+    const wrap = document.createElement("div");
+    wrap.className = "doc-item active";
+    const iconSpan = document.createElement("span"); iconSpan.className = "doc-icon"; iconSpan.textContent = icon;
+    const nameSpan = document.createElement("span"); nameSpan.className = "doc-name"; nameSpan.title = d.name; nameSpan.textContent = d.name;
+    const charSpan = document.createElement("span"); charSpan.className = "doc-chars"; charSpan.textContent = `${kc} 字`;
+    const rmSpan = document.createElement("span"); rmSpan.className = "doc-remove"; rmSpan.textContent = "✕";
+    rmSpan.addEventListener("click", () => removeDoc(d.name));
+    wrap.append(iconSpan, nameSpan, charSpan, rmSpan);
+    list.appendChild(wrap);
+  });
 }
 
 function updateContextBar() {
@@ -1328,9 +1331,15 @@ async function streamResponse(messages) {
     // Add meta row
     const meta = document.createElement("div");
     meta.className = "msg-meta";
-    meta.innerHTML = `
-      <span>${new Date().toLocaleTimeString("zh-TW")} · ${state.model}</span>
-      <button class="copy-btn" onclick="copyText(this, \`${fullContent.replace(/`/g, "\\`")}\`)">複製</button>`;
+    const tsSpan = document.createElement("span");
+    tsSpan.textContent = `${new Date().toLocaleTimeString("zh-TW")} · ${state.model}`;
+    meta.appendChild(tsSpan);
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "copy-btn";
+    copyBtn.textContent = "複製";
+    // Capture content in closure — never inject into HTML/onclick
+    copyBtn.addEventListener("click", () => copyText(copyBtn, fullContent));
+    meta.appendChild(copyBtn);
     group.appendChild(meta);
   }
 
@@ -1358,7 +1367,12 @@ function renderMarkdown(text) {
 }
 
 function escHtml(str) {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function quickPrompt(text) {
@@ -1790,16 +1804,31 @@ async function loadBackups() {
     list.innerHTML = `<span style="color:var(--text-dim);font-size:11px;">尚無備份</span>`;
     return;
   }
-  list.innerHTML = entries.slice(0, 20).map(e => `
-    <div class="backup-item">
-      <div class="backup-info">
-        <div class="backup-name">${e.original_filename}</div>
-        <div><span class="backup-tool">${e.tool_zh}</span> <span class="backup-ts">${e.timestamp.slice(0,16).replace("T"," ")}</span></div>
-      </div>
-      <button onclick="restoreBackup('${e.id}','${e.tool_zh}','${e.timestamp}')">還原</button>
-      <button class="del-btn" onclick="deleteBackup('${e.id}')">刪</button>
-    </div>
-  `).join("");
+  list.innerHTML = "";
+  entries.slice(0, 20).forEach(e => {
+    const item = document.createElement("div");
+    item.className = "backup-item";
+    const info = document.createElement("div");
+    info.className = "backup-info";
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "backup-name";
+    nameDiv.textContent = e.original_filename;
+    const metaDiv = document.createElement("div");
+    const toolSpan = document.createElement("span");
+    toolSpan.className = "backup-tool"; toolSpan.textContent = e.tool_zh;
+    const tsSpan = document.createElement("span");
+    tsSpan.className = "backup-ts"; tsSpan.textContent = " " + e.timestamp.slice(0,16).replace("T"," ");
+    metaDiv.append(toolSpan, tsSpan);
+    info.append(nameDiv, metaDiv);
+    const restoreBtn = document.createElement("button");
+    restoreBtn.textContent = "還原";
+    restoreBtn.addEventListener("click", () => restoreBackup(e.id, e.tool_zh, e.timestamp));
+    const delBtn = document.createElement("button");
+    delBtn.className = "del-btn"; delBtn.textContent = "刪";
+    delBtn.addEventListener("click", () => deleteBackup(e.id));
+    item.append(info, restoreBtn, delBtn);
+    list.appendChild(item);
+  });
 }
 
 async function restoreBackup(bid, toolZh, ts) {

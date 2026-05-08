@@ -147,7 +147,7 @@ if ($ollamaExe) {
 # ─── Step 3: Start Ollama service ─────────────────────────────────────────────
 Head "步驟 3 / 8：啟動 Ollama 服務"
 
-$env:OLLAMA_ORIGINS = '*'
+$env:OLLAMA_ORIGINS = 'http://localhost:8765,http://127.0.0.1:8765'
 $running = WaitOllama -MaxSec 3
 if (-not $running) {
     Info "啟動 Ollama serve..."
@@ -322,7 +322,7 @@ $startBat = @"
 @echo off
 chcp 65001 >nul
 title Win10 离线 AI
-set OLLAMA_ORIGINS=*
+set OLLAMA_ORIGINS=http://localhost:8765,http://127.0.0.1:8765
 echo 啟動 Ollama...
 tasklist /FI "IMAGENAME eq ollama.exe" 2>nul | find "ollama.exe" >nul || start "" /B "$($ollamaExe.Replace('\','\\'))" serve
 timeout /t 4 /nobreak >nul

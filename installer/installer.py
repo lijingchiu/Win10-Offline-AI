@@ -347,7 +347,18 @@ class InstallerApp(tk.Tk):
                 raise RuntimeError("Python 下載失敗")
             self.after(0, lambda: self.log("📦 解壓縮 Python..."))
             with tarfile.open(py_arc, "r:gz") as tar:
-                tar.extractall(INSTALL_DIR)
+                # Use 'data' filter (Python 3.12+) to prevent path traversal (CVE-2007-4559).
+                # Falls back gracefully on older Python via try/except.
+                try:
+                    tar.extractall(INSTALL_DIR, filter="data")
+                except TypeError:
+                    # Manual safety check for older Python without filter support
+                    safe_root = os.path.realpath(str(INSTALL_DIR))
+                    for member in tar.getmembers():
+                        member_path = os.path.realpath(os.path.join(safe_root, member.name))
+                        if not member_path.startswith(safe_root + os.sep) and member_path != safe_root:
+                            raise RuntimeError(f"拒絕解壓不安全路徑: {member.name}")
+                    tar.extractall(INSTALL_DIR)
             # Move extracted folder to expected path if needed
             if not python_exe.exists():
                 for cand in INSTALL_DIR.glob("**/python.exe"):
@@ -359,13 +370,26 @@ class InstallerApp(tk.Tk):
         else:
             self.after(0, lambda: self.log("✅ Python 3.12 已存在"))
 
-        # Install pip packages
+        # Install pip packages — prefer bundled wheels (offline), fallback to PyPI
         self.after(0, lambda: self.progress(44, "安裝 Python 套件..."))
-        self.after(0, lambda: self.log("📦 安裝 Flask / pymupdf / docx / pptx..."))
-        r = run([str(python_exe), "-m", "pip", "install", "--quiet",
-                 "flask", "flask-cors", "pymupdf", "python-docx",
-                 "openpyxl", "python-pptx", "requests"],
-                timeout=300)
+        pkgs = ["flask", "flask-cors", "pymupdf", "python-docx",
+                "openpyxl", "python-pptx", "requests"]
+        # Look for setup/wheels/ next to the EXE / spec root (offline path)
+        wheels_dir = None
+        for cand in [Path(sys.executable).parent / "setup" / "wheels",
+                     Path(__file__).resolve().parent.parent / "setup" / "wheels",
+                     INSTALL_DIR.parent / "setup" / "wheels"]:
+            if cand.is_dir() and any(cand.glob("*.whl")):
+                wheels_dir = cand
+                break
+        if wheels_dir:
+            self.after(0, lambda: self.log(f"📦 從本機 wheel 離線安裝 ({wheels_dir})..."))
+            cmd = [str(python_exe), "-m", "pip", "install", "--quiet",
+                   "--no-index", "--find-links", str(wheels_dir)] + pkgs
+        else:
+            self.after(0, lambda: self.log("⚠️  找不到本機 wheel，改用線上 PyPI（需要網路）", "#fbbf24"))
+            cmd = [str(python_exe), "-m", "pip", "install", "--quiet"] + pkgs
+        r = run(cmd, timeout=300)
         if r.returncode != 0:
             self.after(0, lambda: self.log(f"⚠️  套件安裝警告", "#fbbf24"))
         else:

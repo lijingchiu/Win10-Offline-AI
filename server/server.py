@@ -238,8 +238,19 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
+    # Allowed origins (localhost only — local-first app, browser must be on the same machine)
+    _ALLOWED_ORIGINS = {
+        "http://localhost:8765", "http://127.0.0.1:8765",
+        "http://localhost",      "http://127.0.0.1",
+        "null",  # file:// origin when opening index.html directly
+    }
+
     def _cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin", "")
+        # Reflect only allowed origins; otherwise omit the header (browser will block).
+        if origin in self._ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
