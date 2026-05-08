@@ -916,6 +916,30 @@
 
 <input type="file" id="agent-file-input" accept=".xlsx" onchange="handleAgentFileSelect(event)" style="display:none;">
 
+<!-- ── First-run Welcome Modal ───────────────────────────────────── -->
+<div id="welcome-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:9998; align-items:center; justify-content:center;">
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px; max-width:520px; width:90%;">
+    <h2 style="color:var(--accent); margin:0 0 14px; font-size:18px;">👋 歡迎使用 Win10 離線 AI</h2>
+    <p style="color:var(--text); font-size:13px; line-height:1.7;">
+      <strong>本工具完全在你的電腦運行，資料不會上傳任何伺服器。</strong>
+    </p>
+    <div style="background:var(--surface2); border-radius:8px; padding:14px; margin:14px 0; font-size:13px; line-height:1.7;">
+      <strong style="color:var(--accent2);">📊 Excel Agent 三步操作：</strong><br>
+      <span style="color:var(--text-dim);">1.</span> 拖放 .xlsx 檔案到上傳區<br>
+      <span style="color:var(--text-dim);">2.</span> 用中文描述要做的事（例如：「依部門加總薪資」）<br>
+      <span style="color:var(--text-dim);">3.</span> AI 執行後會提供下載結果，操作前自動備份
+    </div>
+    <p style="color:var(--text-dim); font-size:11px; line-height:1.6;">
+      • 危險操作（刪除等）會跳出確認對話框<br>
+      • 任何操作都可一鍵「↩ 復原」<br>
+      • 備份永久保留於 C:\WinLLM\backups\，可從側邊欄管理
+    </p>
+    <div style="text-align:right; margin-top:18px;">
+      <button onclick="closeWelcome()" style="background:var(--accent); color:#fff; border:none; padding:8px 22px; border-radius:8px; cursor:pointer; font-weight:600;">開始使用</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1798,6 +1822,21 @@ async function deleteBackup(bid) {
   await fetch(`/api/agent/backups/${bid}`, { method: "DELETE" });
   loadBackups();
 }
+
+// ── First-run welcome ────────────────────────────────────────────
+
+function closeWelcome() {
+  document.getElementById("welcome-modal").style.display = "none";
+  localStorage.setItem("winllm_welcome_seen", "1");
+}
+
+// Show welcome on first visit
+window.addEventListener("load", () => {
+  if (!localStorage.getItem("winllm_welcome_seen")) {
+    const m = document.getElementById("welcome-modal");
+    if (m) m.style.display = "flex";
+  }
+});
 </script>
 </body>
 </html>
