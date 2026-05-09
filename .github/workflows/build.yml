@@ -3,14 +3,63 @@ name: Build Windows Installer
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
+# Default to read-only — release job overrides with write at job scope.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
+  test:
     runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest openpyxl pandas rank_bm25 jieba json-repair
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit -v
+
+      - name: Reject sdist in setup/wheels (must be pure wheel closure)
+        shell: pwsh
+        run: |
+          $bad = Get-ChildItem setup/wheels -File | Where-Object { $_.Name -match '\.(tar\.gz|tgz|zip)$' }
+          if ($bad) {
+            $bad | ForEach-Object { Write-Output "✗ Found sdist: $($_.Name)" }
+            throw "setup/wheels/ contains source distributions — convert to wheels (pip wheel) before commit"
+          }
+          Write-Output "✅ setup/wheels/ is pure wheel closure"
+
+      - name: Verify offline wheel closure (no PyPI, no sdist build)
+        shell: pwsh
+        run: |
+          python -m venv .offline-venv
+          .\.offline-venv\Scripts\python.exe -m pip install --upgrade pip --no-index --find-links setup/wheels 2>&1 | Out-Null
+          # --only-binary=:all: forbids any sdist build, so the install can NEVER quietly
+          # fall through to "build source package" path. Real wheel closure or fail.
+          .\.offline-venv\Scripts\python.exe -m pip install --no-index --only-binary=:all: --find-links setup/wheels `
+            flask flask-cors pymupdf python-docx openpyxl python-pptx requests `
+            pandas numpy python-dateutil pytz tzdata six pywin32 xlwings rank-bm25 jieba json-repair
+          if ($LASTEXITCODE -ne 0) { throw "Offline wheel closure incomplete — setup/wheels/ is missing dependencies" }
+          Write-Output "✅ Offline closure complete (all runtime deps satisfied from setup/wheels/)"
+
+  build:
+    needs: test
+    runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -44,13 +93,32 @@ jobs:
           $size = [math]::Round((Get-Item "WinLLM_Setup.exe").length / 1MB, 1)
           echo "EXE size: ${size} MB"
 
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinLLM_Setup
+          path: WinLLM_Setup.exe
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: windows-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+    steps:
+      - name: Download EXE artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WinLLM_Setup
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest-build
           name: "Win10 離線 AI — 最新版"
           body: |
-            ## Win10 離線 AI 安裝包 v1.1
+            ## Win10 離線 AI 安裝包 v2.0
 
             ### 安裝方式
             1. 下載 `WinLLM_Setup.exe`
@@ -61,10 +129,11 @@ jobs:
             ### 包含 AI 模型（自動從 GitHub 下載，全程走 GitHub 網域）
             | 模型 | 大小 | 說明 |
             |------|------|------|
-            | **Qwen3-8B Q4_K_M** | 4.7 GB | 推薦首選，多語言，文件理解最強 |
-            | **Llama 3.1 8B Instruct Q4_K_M** | 4.6 GB | 通用對話，英文能力優秀 |
+            | **Qwen2.5-7B-Instruct Q4_K_M** | 4.4 GB | Excel Agent 主力，中文優異 |
+            | **Qwen3-8B Q4_K_M** | 4.7 GB | 備選，多語言文件問答 |
 
-            > 模型分 3 段下載後自動合併匯入 Ollama，無需任何手動操作。
+            > 模型分段下載後自動合併匯入 Ollama，無需任何手動操作。
+            > Python 套件已打包於 EXE 中，全程離線安裝。
 
             ### 支援文件格式
             PDF · Excel (.xlsx) · Word (.docx) · PowerPoint (.pptx) · TXT
