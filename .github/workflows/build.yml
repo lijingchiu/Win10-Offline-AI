@@ -32,13 +32,24 @@ jobs:
         run: |
           pytest tests/unit -v
 
-      - name: Verify offline wheel closure (no PyPI fallback)
+      - name: Reject sdist in setup/wheels (must be pure wheel closure)
+        shell: pwsh
+        run: |
+          $bad = Get-ChildItem setup/wheels -File | Where-Object { $_.Name -match '\.(tar\.gz|tgz|zip)$' }
+          if ($bad) {
+            $bad | ForEach-Object { Write-Output "✗ Found sdist: $($_.Name)" }
+            throw "setup/wheels/ contains source distributions — convert to wheels (pip wheel) before commit"
+          }
+          Write-Output "✅ setup/wheels/ is pure wheel closure"
+
+      - name: Verify offline wheel closure (no PyPI, no sdist build)
         shell: pwsh
         run: |
           python -m venv .offline-venv
           .\.offline-venv\Scripts\python.exe -m pip install --upgrade pip --no-index --find-links setup/wheels 2>&1 | Out-Null
-          # Install ALL runtime deps using ONLY bundled wheels — fails the build if anything is missing
-          .\.offline-venv\Scripts\python.exe -m pip install --no-index --find-links setup/wheels `
+          # --only-binary=:all: forbids any sdist build, so the install can NEVER quietly
+          # fall through to "build source package" path. Real wheel closure or fail.
+          .\.offline-venv\Scripts\python.exe -m pip install --no-index --only-binary=:all: --find-links setup/wheels `
             flask flask-cors pymupdf python-docx openpyxl python-pptx requests `
             pandas numpy python-dateutil pytz tzdata six pywin32 xlwings rank-bm25 jieba json-repair
           if ($LASTEXITCODE -ne 0) { throw "Offline wheel closure incomplete — setup/wheels/ is missing dependencies" }

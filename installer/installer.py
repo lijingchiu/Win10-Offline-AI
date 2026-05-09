@@ -398,14 +398,27 @@ class InstallerApp(tk.Tk):
                 break
         if wheels_dir:
             self.after(0, lambda: self.log(f"📦 從本機 wheel 離線安裝 ({wheels_dir})..."))
+            # --only-binary=:all: refuses to fall through to sdist build (no compiler needed,
+            # forces a real wheel closure)
             cmd = [str(python_exe), "-m", "pip", "install", "--quiet",
-                   "--no-index", "--find-links", str(wheels_dir)] + pkgs
+                   "--no-index", "--only-binary=:all:",
+                   "--find-links", str(wheels_dir)] + pkgs
         else:
             self.after(0, lambda: self.log("⚠️  找不到本機 wheel，改用線上 PyPI（需要網路）", "#fbbf24"))
             cmd = [str(python_exe), "-m", "pip", "install", "--quiet"] + pkgs
         r = run(cmd, timeout=600)
         if r.returncode != 0:
-            self.after(0, lambda: self.log(f"⚠️  套件安裝警告", "#fbbf24"))
+            # In the bundled-wheels path this is a hard failure — Excel Agent will not
+            # work without these deps, and the previous behaviour was to silently
+            # continue and disable the Agent at runtime.
+            err_tail = (r.stderr or r.stdout or "")[-400:]
+            if wheels_dir:
+                raise RuntimeError(
+                    f"離線套件安裝失敗（使用本機 wheel）。Excel Agent 無法運作。\n"
+                    f"請檢查 setup/wheels/ 是否完整。錯誤訊息：\n{err_tail}"
+                )
+            else:
+                self.after(0, lambda: self.log(f"⚠️  PyPI 套件安裝警告: {err_tail}", "#fbbf24"))
         else:
             self.after(0, lambda: self.log("✅ Python 套件安裝完成"))
 
